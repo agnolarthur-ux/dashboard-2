@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Dashboard didático de futebol com dados fictícios de 2023 a 2026.">
+  <title>Dashboard de Futebol | 2023–2026</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: #101d2e;
+      --panel-soft: #14243a;
+      --line: #26384f;
+      --text: #f2f6fb;
+      --muted: #9aacc2;
+      --green: #53e0a0;
+      --blue: #55a6ff;
+      --gold: #f4c86a;
+      --red: #ff7585;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 22px 48px;
+      background: radial-gradient(ellipse at 15% 0%, #142a3c 0, var(--bg) 42%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .container { width: min(1180px, 100%); margin: 0 auto; }
+    .eyebrow { color: var(--green); text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; font-weight: 800; }
+    header { margin-bottom: 24px; }
+    h1 { margin: 8px 0 9px; font-size: clamp(2rem, 5vw, 3.35rem); letter-spacing: -.045em; line-height: 1.03; }
+    .intro { max-width: 760px; color: var(--muted); line-height: 1.65; margin: 0; }
+    .notice {
+      display: flex; align-items: flex-start; gap: 12px;
+      margin: 20px 0 22px; padding: 14px 16px;
+      border: 1px solid #65552a; border-radius: 12px;
+      background: #302919; color: #f7e7b5; line-height: 1.5;
+    }
+    .notice strong { display: block; color: #ffe49a; margin-bottom: 2px; }
+    .panel {
+      background: linear-gradient(145deg, rgba(20,36,58,.96), rgba(14,27,44,.98));
+      border: 1px solid var(--line); border-radius: 16px;
+      box-shadow: 0 12px 34px rgba(0,0,0,.16);
+    }
+    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 30px 0 13px; }
+    .section-heading h2 { margin: 0; font-size: 1.2rem; letter-spacing: -.02em; }
+    .section-heading p { margin: 5px 0 0; color: var(--muted); font-size: .88rem; }
+    .layer { color: var(--green); font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+    .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 18px 0 15px; }
+    .filter { display: grid; gap: 6px; min-width: 175px; }
+    label { color: var(--muted); font-size: .8rem; font-weight: 700; }
+    select {
+      appearance: none; min-height: 42px; padding: 0 38px 0 12px;
+      border: 1px solid var(--line); border-radius: 10px;
+      color: var(--text); background: var(--panel);
+      font: inherit; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239aacc2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    select:focus-visible, button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    .filter-hint { color: var(--muted); font-size: .78rem; margin: 0 0 3px auto; }
+    .table-panel { overflow: hidden; }
+    .table-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+    .table-wrap { overflow-x: auto; max-height: 420px; }
+    table { width: 100%; border-collapse: collapse; min-width: 620px; font-size: .86rem; }
+    th, td { text-align: left; padding: 11px 15px; border-bottom: 1px solid rgba(38,56,79,.72); white-space: nowrap; }
+    th { position: sticky; top: 0; z-index: 1; background: #14243a; color: #b6c6d9; font-size: .72rem; letter-spacing: .07em; text-transform: uppercase; }
+    tbody tr:hover { background: rgba(85,166,255,.06); }
+    td.score { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--green); }
+    td.season { color: var(--muted); }
+    .empty { padding: 24px; color: var(--muted); text-align: center; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+    .kpi { padding: 18px; min-height: 132px; }
+    .kpi-label { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+    .kpi-value { display: block; margin-top: 13px; font-size: clamp(1.55rem, 3vw, 2.15rem); letter-spacing: -.04em; line-height: 1; font-weight: 800; }
+    .kpi-value.club { font-size: clamp(1.15rem, 2vw, 1.55rem); line-height: 1.15; }
+    .kpi-note { display: block; margin-top: 8px; color: var(--muted); font-size: .78rem; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .chart-card { padding: 18px; min-width: 0; }
+    .chart-card.wide { grid-column: 1 / -1; }
+    .chart-title { margin: 0; font-size: .98rem; }
+    .chart-subtitle { margin: 5px 0 16px; color: var(--muted); font-size: .78rem; line-height: 1.5; }
+    .chart-box { position: relative; height: 280px; }
+    .chart-box.short { height: 270px; }
+    footer { margin-top: 22px; color: var(--muted); font-size: .78rem; line-height: 1.6; }
+    .green { color: var(--green); }
+    @media (max-width: 820px) {
+      body { padding: 24px 15px 36px; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filter-hint { width: 100%; margin-left: 0; }
+    }
+    @media (max-width: 600px) {
+      .charts { grid-template-columns: 1fr; }
+      .chart-card.wide { grid-column: auto; }
+      .kpis { gap: 9px; }
+      .kpi { min-height: 118px; padding: 14px; }
+      .section-heading { align-items: start; flex-direction: column; }
+      .chart-box { height: 250px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <div class="eyebrow">Painel de desempenho · 2023–2026</div>
+      <h1>Futebol em números</h1>
+      <p class="intro">Uma visão rápida das partidas, gols e vitórias de uma liga fictícia. Use os filtros para explorar as temporadas e comparar os clubes.</p>
+      <div class="notice" role="note">
+        <div aria-hidden="true">!</div>
+        <div><strong>Dados fictícios para fins didáticos</strong>Os clubes e resultados foram inventados para demonstrar como os dados viram indicadores e gráficos. Não representam campeonatos reais.</div>
+      </div>
+    </header>
+
+    <section aria-labelledby="dados-title">
+      <div class="section-heading">
+        <div><div class="layer">Camada 1 · Dados</div><h2 id="dados-title">Tabela de partidas</h2><p>Base usada nos cálculos do painel. A tabela vem antes dos indicadores para facilitar a conferência.</p></div>
+      </div>
+      <div class="filters" aria-label="Filtros do dashboard">
+        <div class="filter">
+          <label for="seasonFilter">Temporada</label>
+          <select id="seasonFilter"><option value="all">Todas (2023–2026)</option></select>
+        </div>
+        <div class="filter">
+          <label for="teamFilter">Clube</label>
+          <select id="teamFilter"><option value="all">Todos os clubes</option></select>
+        </div>
+        <p class="filter-hint">Os filtros atualizam a tabela, os cartões e os gráficos de comparação.</p>
+      </div>
+      <div class="panel table-panel">
+        <div class="table-top"><span id="tableCount">30 partidas</span><span>Placar: mandante × visitante</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Temporada</th><th>Data</th><th>Mandante</th><th>Placar</th><th>Visitante</th></tr></thead>
+            <tbody id="matchTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="indicadores-title">
+      <div class="section-heading">
+        <div><div class="layer">Camada 2 · Indicadores</div><h2 id="indicadores-title">Resumo do recorte</h2><p>Os cartões mostram o que aconteceu nas partidas selecionadas.</p></div>
+      </div>
+      <div class="kpis">
+        <article class="panel kpi"><span class="kpi-label">Partidas analisadas</span><strong class="kpi-value" id="kpiMatches">—</strong><span class="kpi-note">No recorte selecionado</span></article>
+        <article class="panel kpi"><span class="kpi-label">Gols nos jogos</span><strong class="kpi-value" id="kpiGoals">—</strong><span class="kpi-note">Soma dos gols dos dois lados</span></article>
+        <article class="panel kpi"><span class="kpi-label">Média de gols</span><strong class="kpi-value" id="kpiAverage">—</strong><span class="kpi-note">Gols totais ÷ partidas</span></article>
+        <article class="panel kpi"><span class="kpi-label">Clube com mais vitórias</span><strong class="kpi-value club" id="kpiTopClub">—</strong><span class="kpi-note" id="kpiTopWins">No recorte selecionado</span></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="graficos-title">
+      <div class="section-heading">
+        <div><div class="layer">Camada 3 · Visualizações</div><h2 id="graficos-title">Tendências e comparações</h2><p>Gráficos atualizados a partir da mesma base de partidas.</p></div>
+      </div>
+      <div class="charts">
+        <article class="panel chart-card wide">
+          <h3 class="chart-title">Como evoluíram os gols por temporada?</h3>
+          <p class="chart-subtitle">Total de gols em cada ano. Este gráfico preserva a comparação 2023–2026 e considera o filtro de clube, mesmo quando uma temporada específica é selecionada.</p>
+          <div class="chart-box"><canvas id="yearChart" aria-label="Gráfico de linha com gols por temporada"></canvas></div>
+        </article>
+        <article class="panel chart-card">
+          <h3 class="chart-title">Quais clubes venceram mais?</h3>
+          <p class="chart-subtitle">Vitórias nas partidas que aparecem no recorte escolhido.</p>
+          <div class="chart-box short"><canvas id="winsChart" aria-label="Gráfico de barras com vitórias por clube"></canvas></div>
+        </article>
+        <article class="panel chart-card">
+          <h3 class="chart-title">Como terminaram as partidas?</h3>
+          <p class="chart-subtitle">Proporção de vitórias do mandante, empates e vitórias do visitante.</p>
+          <div class="chart-box short"><canvas id="resultsChart" aria-label="Gráfico de rosca com resultados"></canvas></div>
+        </article>
+      </div>
+    </section>
+
+    <footer>Importante: este painel é um exemplo escolar com números inventados. A média de gols é calculada dividindo o total de gols pelo número de partidas do recorte. Para usar dados reais, substitua a lista de partidas no bloco <span class="green">DADOS</span> do código.</footer>
+  </main>
+
+  <script>
+    // ===== 1) DADOS =====
+    // Cada objeto representa uma partida. Os resultados abaixo são fictícios.
+    const partidas = [
+      { temporada: 2023, data: "2023-03-12", mandante: "Atlético Aurora", golsMandante: 2, golsVisitante: 1, visitante: "União Serrana" },
+      { temporada: 2023, data: "2023-04-02", mandante: "Estrela do Sul", golsMandante: 1, golsVisitante: 1, visitante: "Fênix Esporte" },
+      { temporada: 2023, data: "2023-05-18", mandante: "Grêmio do Vale", golsMandante: 0, golsVisitante: 2, visitante: "Porto Azul" },
+      { temporada: 2023, data: "2023-06-07", mandante: "União Serrana", golsMandante: 2, golsVisitante: 0, visitante: "Estrela do Sul" },
+      { temporada: 2023, data: "2023-07-21", mandante: "Fênix Esporte", golsMandante: 1, golsVisitante: 3, visitante: "Atlético Aurora" },
+      { temporada: 2023, data: "2023-09-03", mandante: "Porto Azul", golsMandante: 1, golsVisitante: 0, visitante: "União Serrana" },
+      { temporada: 2023, data: "2023-10-15", mandante: "Atlético Aurora", golsMandante: 2, golsVisitante: 2, visitante: "Grêmio do Vale" },
+
+      { temporada: 2024, data: "2024-03-10", mandante: "Porto Azul", golsMandante: 1, golsVisitante: 1, visitante: "Atlético Aurora" },
+      { temporada: 2024, data: "2024-04-06", mandante: "Grêmio do Vale", golsMandante: 2, golsVisitante: 1, visitante: "Estrela do Sul" },
+      { temporada: 2024, data: "2024-05-11", mandante: "União Serrana", golsMandante: 0, golsVisitante: 2, visitante: "Fênix Esporte" },
+      { temporada: 2024, data: "2024-06-22", mandante: "Atlético Aurora", golsMandante: 3, golsVisitante: 0, visitante: "Estrela do Sul" },
+      { temporada: 2024, data: "2024-08-04", mandante: "Fênix Esporte", golsMandante: 1, golsVisitante: 1, visitante: "Porto Azul" },
+      { temporada: 2024, data: "2024-09-14", mandante: "Estrela do Sul", golsMandante: 2, golsVisitante: 2, visitante: "União Serrana" },
+      { temporada: 2024, data: "2024-11-02", mandante: "Grêmio do Vale", golsMandante: 0, golsVisitante: 1, visitante: "Atlético Aurora" },
+
+      { temporada: 2025, data: "2025-03-09", mandante: "Atlético Aurora", golsMandante: 2, golsVisitante: 0, visitante: "Fênix Esporte" },
+      { temporada: 2025, data: "2025-04-13", mandante: "União Serrana", golsMandante: 1, golsVisitante: 1, visitante: "Porto Azul" },
+      { temporada: 2025, data: "2025-05-25", mandante: "Estrela do Sul", golsMandante: 2, golsVisitante: 3, visitante: "Grêmio do Vale" },
+      { temporada: 2025, data: "2025-06-15", mandante: "Porto Azul", golsMandante: 0, golsVisitante: 1, visitante: "Estrela do Sul" },
+      { temporada: 2025, data: "2025-07-20", mandante: "Fênix Esporte", golsMandante: 2, golsVisitante: 2, visitante: "União Serrana" },
+      { temporada: 2025, data: "2025-08-31", mandante: "Grêmio do Vale", golsMandante: 1, golsVisitante: 2, visitante: "Atlético Aurora" },
+      { temporada: 2025, data: "2025-09-28", mandante: "Atlético Aurora", golsMandante: 1, golsVisitante: 0, visitante: "Porto Azul" },
+      { temporada: 2025, data: "2025-11-16", mandante: "União Serrana", golsMandante: 0, golsVisitante: 2, visitante: "Grêmio do Vale" },
+
+      { temporada: 2026, data: "2026-03-08", mandante: "Estrela do Sul", golsMandante: 1, golsVisitante: 1, visitante: "Atlético Aurora" },
+      { temporada: 2026, data: "2026-04-12", mandante: "Porto Azul", golsMandante: 2, golsVisitante: 1, visitante: "Fênix Esporte" },
+      { temporada: 2026, data: "2026-05-17", mandante: "União Serrana", golsMandante: 0, golsVisitante: 2, visitante: "Atlético Aurora" },
+      { temporada: 2026, data: "2026-06-21", mandante: "Grêmio do Vale", golsMandante: 3, golsVisitante: 1, visitante: "Fênix Esporte" },
+      { temporada: 2026, data: "2026-07-19", mandante: "Atlético Aurora", golsMandante: 1, golsVisitante: 2, visitante: "Porto Azul" },
+      { temporada: 2026, data: "2026-08-23", mandante: "Estrela do Sul", golsMandante: 0, golsVisitante: 1, visitante: "União Serrana" },
+      { temporada: 2026, data: "2026-09-13", mandante: "Fênix Esporte", golsMandante: 2, golsVisitante: 2, visitante: "Estrela do Sul" },
+      { temporada: 2026, data: "2026-10-18", mandante: "Porto Azul", golsMandante: 1, golsVisitante: 3, visitante: "Grêmio do Vale" }
+    ];
+
+    const temporadas = [2023, 2024, 2025, 2026];
+    const clubes = [...new Set(partidas.flatMap(p => [p.mandante, p.visitante]))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    // Preenche os filtros automaticamente a partir das temporadas e dos clubes existentes.
+    const seasonFilter = document.getElementById("seasonFilter");
+    const teamFilter = document.getElementById("teamFilter");
+    temporadas.forEach(ano => seasonFilter.insertAdjacentHTML("beforeend", `<option value="${ano}">${ano}</option>`));
+    clubes.forEach(clube => teamFilter.insertAdjacentHTML("beforeend", `<option value="${clube}">${clube}</option>`));
+
+    // ===== 2) PROCESSAMENTO =====
+    // O filtro de clube inclui partidas em que ele foi mandante OU visitante.
+    function partidasFiltradas() {
+      const temporadaSelecionada = seasonFilter.value;
+      const clubeSelecionado = teamFilter.value;
+      return partidas.filter(p => {
+        const passaTemporada = temporadaSelecionada === "all" || String(p.temporada) === temporadaSelecionada;
+        const passaClube = clubeSelecionado === "all" || p.mandante === clubeSelecionado || p.visitante === clubeSelecionado;
+        return passaTemporada && passaClube;
+      });
+    }
+
+    function calcularEstatisticas(lista) {
+      const estatisticas = Object.fromEntries(clubes.map(clube => [clube, { vitorias: 0, empates: 0, derrotas: 0, golsFeitos: 0, golsSofridos: 0, pontos: 0 }]));
+      lista.forEach(p => {
+        const mandante = estatisticas[p.mandante];
+        const visitante = estatisticas[p.visitante];
+        mandante.golsFeitos += p.golsMandante;
+        mandante.golsSofridos += p.golsVisitante;
+        visitante.golsFeitos += p.golsVisitante;
+        visitante.golsSofridos += p.golsMandante;
+        if (p.golsMandante > p.golsVisitante) {
+          mandante.vitorias++; mandante.pontos += 3; visitante.derrotas++;
+        } else if (p.golsMandante < p.golsVisitante) {
+          visitante.vitorias++; visitante.pontos += 3; mandante.derrotas++;
+        } else {
+          mandante.empates++; visitante.empates++; mandante.pontos++; visitante.pontos++;
+        }
+      });
+      return estatisticas;
+    }
+
+    const numeroBR = valor => new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(valor);
+    const dataBR = iso => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+
+    // ===== 3) EXIBIÇÃO DA CAMADA DE DADOS E DOS KPIs =====
+    function atualizarTabela(lista) {
+      const tbody = document.getElementById("matchTable");
+      document.getElementById("tableCount").textContent = `${lista.length} ${lista.length === 1 ? "partida" : "partidas"}`;
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Não há partidas para essa combinação de filtros.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = lista.map(p => `
+        <tr>
+          <td class="season">${p.temporada}</td>
+          <td>${dataBR(p.data)}</td>
+          <td>${p.mandante}</td>
+          <td class="score">${p.golsMandante} × ${p.golsVisitante}</td>
+          <td>${p.visitante}</td>
+        </tr>`).join("");
+    }
+
+    function atualizarKPIs(lista) {
+      const totalGols = lista.reduce((soma, p) => soma + p.golsMandante + p.golsVisitante, 0);
+      const media = lista.length ? totalGols / lista.length : 0;
+      const estatisticas = calcularEstatisticas(lista);
+      const ranking = Object.entries(estatisticas).sort((a, b) => b[1].vitorias - a[1].vitorias || b[1].pontos - a[1].pontos || (b[1].golsFeitos - b[1].golsSofridos) - (a[1].golsFeitos - a[1].golsSofridos));
+      const lider = lista.length ? ranking[0] : null;
+      document.getElementById("kpiMatches").textContent = numeroBR(lista.length);
+      document.getElementById("kpiGoals").textContent = numeroBR(totalGols);
+      document.getElementById("kpiAverage").textContent = lista.length ? numeroBR(media) : "—";
+      document.getElementById("kpiTopClub").textContent = lider ? lider[0] : "—";
+      document.getElementById("kpiTopWins").textContent = lider ? `${lider[1].vitorias} ${lider[1].vitorias === 1 ? "vitória" : "vitórias"} no recorte` : "Sem partidas no recorte";
+    }
+
+    // ===== 4) GRÁFICOS =====
+    Chart.defaults.color = "#9aacc2";
+    Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
+    let graficoAnual, graficoVitorias, graficoResultados;
+
+    function atualizarGraficos(lista) {
+      const clubeSelecionado = teamFilter.value;
+      // A tendência anual considera todas as temporadas para continuar comparável ao filtrar um ano.
+      const historicoAnual = partidas.filter(p => clubeSelecionado === "all" || p.mandante === clubeSelecionado || p.visitante === clubeSelecionado);
+      const golsPorAno = temporadas.map(ano => historicoAnual.filter(p => p.temporada === ano).reduce((soma, p) => soma + p.golsMandante + p.golsVisitante, 0));
+      const estatisticas = calcularEstatisticas(lista);
+      const ranking = Object.entries(estatisticas).sort((a, b) => b[1].vitorias - a[1].vitorias || b[1].pontos - a[1].pontos || a[0].localeCompare(b[0], "pt-BR"));
+      const resultados = [
+        lista.filter(p => p.golsMandante > p.golsVisitante).length,
+        lista.filter(p => p.golsMandante === p.golsVisitante).length,
+        lista.filter(p => p.golsMandante < p.golsVisitante).length
+      ];
+      [graficoAnual, graficoVitorias, graficoResultados].forEach(g => { if (g) g.destroy(); });
+
+      graficoAnual = new Chart(document.getElementById("yearChart"), {
+        type: "line",
+        data: { labels: temporadas, datasets: [{ label: "Gols", data: golsPorAno, borderColor: "#53e0a0", backgroundColor: "rgba(83,224,160,.13)", fill: true, tension: .35, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: "#53e0a0", borderWidth: 3 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: contexto => `${contexto.parsed.y} gols` } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "rgba(154,172,194,.12)" } } } }
+      });
+
+      graficoVitorias = new Chart(document.getElementById("winsChart"), {
+        type: "bar",
+        data: { labels: ranking.map(([clube]) => clube), datasets: [{ label: "Vitórias", data: ranking.map(([, dados]) => dados.vitorias), backgroundColor: ranking.map((_, i) => i === 0 ? "#53e0a0" : "#3987cf"), borderRadius: 6, borderSkipped: false }] },
+        options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: contexto => `${contexto.parsed.x} vitórias` } } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "rgba(154,172,194,.12)" } }, y: { grid: { display: false } } } }
+      });
+
+      graficoResultados = new Chart(document.getElementById("resultsChart"), {
+        type: "doughnut",
+        data: { labels: ["Vitória do mandante", "Empate", "Vitória do visitante"], datasets: [{ data: resultados, backgroundColor: ["#53e0a0", "#f4c86a", "#55a6ff"], borderColor: "#101d2e", borderWidth: 4, hoverOffset: 7 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: "66%", plugins: { legend: { position: "bottom", labels: { padding: 16, usePointStyle: true, pointStyle: "circle", boxWidth: 8 } }, tooltip: { callbacks: { label: contexto => `${contexto.label}: ${contexto.parsed} (${lista.length ? numeroBR(contexto.parsed / lista.length * 100) : 0}%)` } } } }
+      });
+    }
+
+    // Refaz tabela, cartões e gráficos sempre que um filtro muda.
+    function atualizarPainel() {
+      const lista = partidasFiltradas();
+      atualizarTabela(lista);
+      atualizarKPIs(lista);
+      atualizarGraficos(lista);
+    }
+    seasonFilter.addEventListener("change", atualizarPainel);
+    teamFilter.addEventListener("change", atualizarPainel);
+    atualizarPainel();
+  </script>
+</body>
+</html>
